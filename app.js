@@ -100,16 +100,26 @@ async function typeInto(el, html){
   el.innerHTML = html;
 }
 
+let currentAbortController = null;
+
 async function ask(message, imageDataUrl=null){
   errEl.hidden = true;
+  sendBtn.disabled = true;
+  qEl.disabled = true;
+  chips.querySelectorAll('button').forEach(b=>b.disabled=true);
+  btnUseImage.disabled = true;
 
   addMsg('user', `<div>${escapeHtml(message || '📷 (سؤال من صورة)')}</div>`, 'أنت');
 
-  const holder = addMsg('assistant', `<div class="loading-dots">جاري المعالجة — قد يستغرق 15-30 ثانية</div>`, 'المساعد');
+  const holder = addMsg('assistant', `<div class="loading-wrap"><span class="loading-dots">جاري المعالجة</span> <button type="button" class="btn-cancel" aria-label="إلغاء">إلغاء</button></div>`, 'المساعد');
   holder.closest('.msg').classList.add('loading');
+  const controller = new AbortController();
+  currentAbortController = controller;
+  const cancelBtn = holder.querySelector('.btn-cancel');
+  cancelBtn.onclick = () => controller.abort();
+
   try{
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    const timeout = setTimeout(() => controller.abort(), 35000);
     const res = await fetch(API_URL, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -117,8 +127,14 @@ async function ask(message, imageDataUrl=null){
       signal: controller.signal
     });
     clearTimeout(timeout);
+    currentAbortController = null;
+    sendBtn.disabled = false;
+    qEl.disabled = false;
+    chips.querySelectorAll('button').forEach(b=>b.disabled=false);
+    btnUseImage.disabled = false;
     const data = await res.json();
     if(!res.ok || !data.ok){
+      clearTimeout(timeout);
       const errMap = {
         missing_message: 'أدخل سؤالك أولاً',
         missing_api_key: 'أضف OPENAI_API_KEY في Cloudflare (Settings → Variables and Secrets)',
@@ -132,6 +148,11 @@ async function ask(message, imageDataUrl=null){
     const html = renderMarkdown(data.text || '');
     await typeInto(holder, html);
   }catch(e){
+    currentAbortController = null;
+    sendBtn.disabled = false;
+    qEl.disabled = false;
+    chips.querySelectorAll('button').forEach(b=>b.disabled=false);
+    btnUseImage.disabled = false;
     holder.closest('.msg')?.classList.remove('loading');
     holder.innerHTML = '';
     errEl.hidden = false;
@@ -140,7 +161,7 @@ async function ask(message, imageDataUrl=null){
       msg = 'فشل الاتصال. جرّب: الاتصال بالإنترنت، تحديث الصفحة، أو استخدام شبكة أخرى (قد يُحظر workers.dev في بعض الشبكات)';
     }
     if (e.name === 'AbortError' || msg.includes('abort')) {
-      msg = 'انتهت المهلة. جرّب سؤالاً أقصر أو تحقق من اتصالك.';
+      msg = 'تم الإلغاء أو انتهت المهلة (35 ثانية). جرّب سؤالاً أقصر أو تحقق من اتصالك.';
     }
     errEl.textContent = 'خطأ: ' + msg;
   }
