@@ -58,16 +58,18 @@ function renderMarkdown(md){
   let text = md || '';
   text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
     .replace(/\(frac\s*\{/g, '\\( \\frac{')
-    .replace(/\(%\s*times/g, '\\( 100 \\times');
+    .replace(/\(%\s*times/g, '\\( 100 \\times')
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}(?=\s*[=\)،\.\]\s]|\s*$)/g, '\\( \\frac{$1}{$2} \\)')
+    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, '\\[ m = \\frac{L+U}{2} \\]');
   const html = marked.parse(text);
   const container = document.createElement('div');
   container.innerHTML = html;
 
-  container.querySelectorAll('code.language-ksu-chart').forEach(code => {
-    const chartEl = renderChartFromData(code.textContent);
-    if (chartEl) {
-      const pre = code.closest('pre');
-      if (pre) pre.replaceWith(chartEl);
+  container.querySelectorAll('pre > code').forEach(code => {
+    const txt = code.textContent || '';
+    if (/^\s*\{\s*"type"/.test(txt)) {
+      const chartEl = renderChartFromData(txt);
+      if (chartEl) code.closest('pre').replaceWith(chartEl);
     }
   });
 
