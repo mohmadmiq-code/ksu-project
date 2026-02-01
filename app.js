@@ -67,28 +67,44 @@ async function ask(message, imageDataUrl=null){
 
   addMsg('user', `<div>${escapeHtml(message || '📷 (سؤال من صورة)')}</div>`, 'أنت');
 
-  const holder = addMsg('assistant', `<div>...</div>`, 'المساعد');
+  const holder = addMsg('assistant', `<div class="loading-dots">جاري المعالجة — قد يستغرق 15-30 ثانية</div>`, 'المساعد');
+  holder.closest('.msg').classList.add('loading');
   try{
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
     const res = await fetch(API_URL, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ message, history: [], imageDataUrl })
+      body: JSON.stringify({ message, history: [], imageDataUrl }),
+      signal: controller.signal
     });
+    clearTimeout(timeout);
     const data = await res.json();
     if(!res.ok || !data.ok){
       const errMap = {
         missing_message: 'أدخل سؤالك أولاً',
+        missing_api_key: 'أضف OPENAI_API_KEY في Cloudflare (Settings → Variables and Secrets)',
         missing_api_key_for_image: 'مفتاح OpenAI غير مُفعّل — فعّل OPENAI_API_KEY في Cloudflare',
-        invalid_json: 'خطأ في البيانات المُرسلة'
+        invalid_json: 'خطأ في البيانات المُرسلة',
+        openai_error: 'خطأ في الاتصال بـ OpenAI — تحقق من المفتاح عبر /api/check'
       };
-      throw new Error(errMap[data.error] || data.error || 'فشل الاتصال بالخادم');
+      throw new Error(data.message || errMap[data.error] || data.error || 'فشل الاتصال بالخادم');
     }
+    holder.closest('.msg').classList.remove('loading');
     const html = renderMarkdown(data.text || '');
     await typeInto(holder, html);
   }catch(e){
+    holder.closest('.msg')?.classList.remove('loading');
     holder.innerHTML = '';
     errEl.hidden = false;
-    errEl.textContent = 'خطأ: ' + e.message;
+    let msg = e.message;
+    if (msg === 'Failed to fetch') {
+      msg = 'فشل الاتصال. جرّب: الاتصال بالإنترنت، تحديث الصفحة، أو استخدام شبكة أخرى (قد يُحظر workers.dev في بعض الشبكات)';
+    }
+    if (e.name === 'AbortError' || msg.includes('abort')) {
+      msg = 'انتهت المهلة. جرّب سؤالاً أقصر أو تحقق من اتصالك.';
+    }
+    errEl.textContent = 'خطأ: ' + msg;
   }
 }
 
@@ -254,4 +270,4 @@ drawBtn.addEventListener('click', ()=>{
 });
 
 // Initial greeting
-addMsg('assistant', renderMarkdown('مرحبًا. أنا مساعد **إحص 102** — ملتزم بالمنهاج. اسأل عن الجداول التكرارية، التمثيل بالأعمدة والقطاعات، التوزيع التكراري، المدرج والمضلع والمنحنى التراكمي — أو استخدم “الموضوعات السريعة”.'), 'المساعد');
+addMsg('assistant', renderMarkdown('مرحبًا. أنا مساعد **إحص 102** — ملتزم بالمنهاج. اسأل عن الجداول التكرارية، التمثيل بالأعمدة والقطاعات، التوزيع التكراري، المدرج والمضلع التكراري والمضلع التكراري المتجمع الصاعد — أو استخدم “الموضوعات السريعة”.'), 'المساعد');

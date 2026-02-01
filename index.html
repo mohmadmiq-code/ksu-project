@@ -13,11 +13,11 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-title">STAT 102</div>
-      <div class="brand-subtitle">الفصل الثاني: تنظيم وعرض البيانات الإحصائية وتمثيلها — 2.1 و 2.2</div>
-    </div>
-    <div class="brand-mark" aria-hidden="true">
-      <img src="ai-mark.svg" alt="" />
+      <img src="ai-mark.svg" alt="" class="brand-mark" aria-hidden="true" />
+      <div>
+        <div class="brand-title">إحص 102 — مساعد تعليمي</div>
+        <div class="brand-subtitle">الفصل الثاني: تنظيم وعرض البيانات | جامعة الملك سعود</div>
+      </div>
     </div>
   </header>
 
@@ -31,7 +31,8 @@
         <button class="chip" data-q="كيف أنشئ جدول توزيع تكراري للبيانات المتصلة؟">توزيع تكراري (2.2)</button>
         <button class="chip" data-q="اشرح المدرج التكراري وكيف يرسم؟">مدرج تكراري</button>
         <button class="chip" data-q="اشرح المضلع التكراري؟">مضلع تكراري</button>
-        <button class="chip" data-q="اشرح المنحنى التراكمي (Ogive)؟">منحنى تراكمي</button>
+        <button class="chip" data-q="اشرح المضلع التكراري المتجمع الصاعد؟">مضلع تكراري متجمع صاعد</button>
+        <button class="chip" data-q="أعطني كود بايثون لرسم الأعمدة والقطاعات والمدرج التكراري">كود Python</button>
       </div>
 
       <div class="divider"></div>
@@ -50,15 +51,15 @@
       <div class="chat-head">
         <div class="chat-title">المحادثة</div>
         <div class="chat-badges">
-          <span class="badge">Book-locked</span>
-          <span class="badge muted">2.1 + 2.2</span>
+          <span class="badge">ملتزم بالمنهاج</span>
+          <span class="badge muted">2.1 و 2.2</span>
         </div>
       </div>
 
       <div id="chatLog" class="chat-log" aria-live="polite"></div>
 
       <div class="chat-input">
-        <textarea id="q" rows="2" placeholder="اكتب سؤالك... (جدول تكراري، أعمدة، قطاعات، مدرج، مضلع، منحنى تراكمي)"></textarea>
+        <textarea id="q" rows="2" placeholder="اكتب سؤالك... (جدول تكراري، أعمدة، قطاعات، مدرج، مضلع تكراري متجمع صاعد)"></textarea>
         <button id="send" class="btn">إرسال</button>
       </div>
 
