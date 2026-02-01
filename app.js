@@ -32,14 +32,19 @@ function addMsg(role, bodyHtml, meta){
 }
 
 function renderMarkdown(md){
-  const html = marked.parse(md || '');
+  let text = md || '';
+  text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
+    .replace(/\(frac\s*\{/g, '\\( \\frac{')
+    .replace(/\(%\s*times/g, '\\( 100 \\times');
+  const html = marked.parse(text);
   const container = document.createElement('div');
   container.innerHTML = html;
 
-  // KaTeX render
   renderMathInElement(container, {
     delimiters: [
+      {left: "$$", right: "$$", display: true},
       {left: "\\[", right: "\\]", display: true},
+      {left: "$", right: "$", display: false},
       {left: "\\(", right: "\\)", display: false}
     ],
     throwOnError: false
