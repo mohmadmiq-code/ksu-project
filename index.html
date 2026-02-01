@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="مساعد إحص 102 - الفصل الثاني: تنظيم وعرض البيانات الإحصائية - جامعة الملك سعود" />
+  <title>إحص 102 | مساعد الفصل الثاني — جامعة الملك سعود</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-title">STAT 102</div>
+      <div class="brand-subtitle">الفصل الثاني: تنظيم وعرض البيانات الإحصائية وتمثيلها — 2.1 و 2.2</div>
+    </div>
+    <div class="brand-mark" aria-hidden="true">
+      <img src="ai-mark.svg" alt="" />
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <div class="card-title">الموضوعات السريعة</div>
+      <div class="chips" id="chips">
+        <button class="chip" data-q="كيف أنشئ جدول تكراري للبيانات المتقطعة؟">جدول تكراري (2.1)</button>
+        <button class="chip" data-q="كيف أمثل البيانات بالأعمدة؟">رسم أعمدة</button>
+        <button class="chip" data-q="كيف أمثل البيانات بالقطاعات الدائرية؟">قطاعات دائرية</button>
+        <button class="chip" data-q="كيف أنشئ جدول توزيع تكراري للبيانات المتصلة؟">توزيع تكراري (2.2)</button>
+        <button class="chip" data-q="اشرح المدرج التكراري وكيف يرسم؟">مدرج تكراري</button>
+        <button class="chip" data-q="اشرح المضلع التكراري؟">مضلع تكراري</button>
+        <button class="chip" data-q="اشرح المنحنى التراكمي (Ogive)؟">منحنى تراكمي</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="uploader">
+        <div class="uploader-title">رفع صورة سؤال</div>
+        <div class="uploader-row">
+          <input id="imgInput" type="file" accept="image/*" />
+          <button id="btnUseImage" class="btn secondary">استخدم الصورة للسؤال</button>
+        </div>
+        <div class="hint">يرسل السؤال من الصورة للـ API ثم يجيب ضمن الفصل الثاني فقط.</div>
+      </div>
+    </section>
+
+    <section class="card chat">
+      <div class="chat-head">
+        <div class="chat-title">المحادثة</div>
+        <div class="chat-badges">
+          <span class="badge">Book-locked</span>
+          <span class="badge muted">2.1 + 2.2</span>
+        </div>
+      </div>
+
+      <div id="chatLog" class="chat-log" aria-live="polite"></div>
+
+      <div class="chat-input">
+        <textarea id="q" rows="2" placeholder="اكتب سؤالك... (جدول تكراري، أعمدة، قطاعات، مدرج، مضلع، منحنى تراكمي)"></textarea>
+        <button id="send" class="btn">إرسال</button>
+      </div>
+
+      <div class="error" id="err" hidden></div>
+    </section>
+
+    <section class="card tools">
+      <div class="card-title">أدوات البيانات والرسوم</div>
+      <div class="tool-grid">
+        <div class="tool">
+          <div class="tool-title">رفع ملف CSV</div>
+          <input id="csvInput" type="file" accept=".csv,text/csv" />
+          <div class="hint">اختر ملف CSV من جهازك ثم اختر العمود ونوع الرسم.</div>
+        </div>
+
+        <div class="tool">
+          <div class="tool-title">اختيار العمود</div>
+          <select id="colSelect" disabled></select>
+        </div>
+
+        <div class="tool">
+          <div class="tool-title">نوع الرسم</div>
+          <select id="chartType" disabled>
+            <option value="bar">أعمدة (Bar)</option>
+            <option value="pie">قطاعات (Pie)</option>
+            <option value="hist">مدرج تكراري (Histogram)</option>
+            <option value="dot">نقطي (Dot)</option>
+          </select>
+        </div>
+
+        <div class="tool">
+          <div class="tool-title">تنفيذ</div>
+          <button id="draw" class="btn secondary" disabled>ارسم</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="table-wrap">
+        <div class="table-title">معاينة البيانات</div>
+        <div id="tableHost"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <canvas id="chart" height="260"></canvas>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
