@@ -31,6 +31,29 @@ function addMsg(role, bodyHtml, meta){
   return wrap.querySelector('.body');
 }
 
+function renderChartFromData(chartData) {
+  try {
+    const d = typeof chartData === 'string' ? JSON.parse(chartData.trim()) : chartData;
+    if (!d || !d.type || !d.data) return null;
+    const wrap = document.createElement('div');
+    wrap.className = 'msg-chart-wrap';
+    const canvas = document.createElement('canvas');
+    wrap.appendChild(canvas);
+    const cfg = {
+      type: d.type === 'hist' ? 'bar' : d.type,
+      data: { labels: d.labels || [], datasets: [{ label: 'القيم', data: d.data }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { display: d.type === 'pie' } }
+      }
+    };
+    if (d.type === 'hist') cfg.options.scales = { x: { display: true }, y: { display: true } };
+    new Chart(canvas, cfg);
+    return wrap;
+  } catch (e) { return null; }
+}
+
 function renderMarkdown(md){
   let text = md || '';
   text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
@@ -39,6 +62,14 @@ function renderMarkdown(md){
   const html = marked.parse(text);
   const container = document.createElement('div');
   container.innerHTML = html;
+
+  container.querySelectorAll('code.language-ksu-chart').forEach(code => {
+    const chartEl = renderChartFromData(code.textContent);
+    if (chartEl) {
+      const pre = code.closest('pre');
+      if (pre) pre.replaceWith(chartEl);
+    }
+  });
 
   renderMathInElement(container, {
     delimiters: [

@@ -321,6 +321,20 @@ body {
   background: rgba(255,255,255,0.2);
 }
 
+.msg-chart-wrap {
+  margin: 1rem 0;
+  max-width: 400px;
+  height: 220px;
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.msg-chart-wrap canvas {
+  max-height: 200px;
+}
+
 .msg.loading .body {
   color: var(--text-3);
 }
