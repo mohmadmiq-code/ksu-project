@@ -59,8 +59,11 @@ function renderMarkdown(md){
   text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
     .replace(/\(frac\s*\{/g, '\\( \\frac{')
     .replace(/\(%\s*times/g, '\\( 100 \\times')
-    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}(?=\s*[=\)،\.\]\s]|\s*$)/g, '\\( \\frac{$1}{$2} \\)')
-    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, '\\[ m = \\frac{L+U}{2} \\]');
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '\\( \\frac{$1}{$2} \\)')
+    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, '\\[ m = \\frac{L+U}{2} \\]')
+    .replace(/\\Rightarrow(?!\s*\\))/g, '\\( \\Rightarrow \\)')
+    .replace(/\\approx(?!\s*\\))/g, '\\( \\approx \\)')
+    .replace(/\\times(?!\s*\\))/g, '\\( \\times \\)');
   const html = marked.parse(text);
   const container = document.createElement('div');
   container.innerHTML = html;
