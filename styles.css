@@ -125,7 +125,7 @@ body {
   width: 100%;
   padding: 1.5rem;
   display: grid;
-  grid-template-columns: 240px 1fr 300px;
+  grid-template-columns: 240px 1fr;
   gap: 1.5rem;
   align-items: start;
 }
@@ -459,6 +459,32 @@ body {
   width: 100%;
 }
 
+.btn-icon {
+  padding: 0.6rem;
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.btn-icon:hover {
+  background: var(--primary-bg);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-icon.recording {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+  animation: pulseRec 1s infinite;
+}
+
+@keyframes pulseRec {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
 /* الخطأ */
 .error {
   margin-top: 0.75rem;
@@ -564,7 +590,7 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .sidebar, .tools-panel {
+  .sidebar {
     position: static;
   }
 

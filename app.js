@@ -127,8 +127,8 @@ async function ask(message, imageDataUrl=null){
   errEl.hidden = true;
   sendBtn.disabled = true;
   qEl.disabled = true;
-  chips.querySelectorAll('button').forEach(b=>b.disabled=true);
-  btnUseImage.disabled = true;
+  if (chips) chips.querySelectorAll('button').forEach(b=>b.disabled=true);
+  if (btnUseImage) btnUseImage.disabled = true;
 
   addMsg('user', `<div>${escapeHtml(message || '📷 (سؤال من صورة)')}</div>`, 'أنت');
 
@@ -151,8 +151,8 @@ async function ask(message, imageDataUrl=null){
     currentAbortController = null;
     sendBtn.disabled = false;
     qEl.disabled = false;
-    chips.querySelectorAll('button').forEach(b=>b.disabled=false);
-    btnUseImage.disabled = false;
+    if (chips) chips.querySelectorAll('button').forEach(b=>b.disabled=false);
+    if (btnUseImage) btnUseImage.disabled = false;
     const data = await res.json();
     if(!res.ok || !data.ok){
       clearTimeout(timeout);
@@ -173,8 +173,8 @@ async function ask(message, imageDataUrl=null){
     currentAbortController = null;
     sendBtn.disabled = false;
     qEl.disabled = false;
-    chips.querySelectorAll('button').forEach(b=>b.disabled=false);
-    btnUseImage.disabled = false;
+    if (chips) chips.querySelectorAll('button').forEach(b=>b.disabled=false);
+    if (btnUseImage) btnUseImage.disabled = false;
     holder.closest('.msg')?.classList.remove('loading');
     holder.innerHTML = '';
     errEl.hidden = false;
@@ -191,7 +191,12 @@ async function ask(message, imageDataUrl=null){
 
 sendBtn.addEventListener('click', ()=>{
   const m = (qEl.value || '').trim();
-  if(!m) return;
+  if(!m) {
+    errEl.hidden = false;
+    errEl.textContent = 'اكتب سؤالك أولاً أو استخدم التحدث';
+    return;
+  }
+  errEl.hidden = true;
   qEl.value = '';
   ask(m);
 });
@@ -203,7 +208,7 @@ qEl.addEventListener('keydown', (e)=>{
   }
 });
 
-chips.addEventListener('click', (e)=>{
+if (chips) chips.addEventListener('click', (e)=>{
   const b = e.target.closest('button[data-q]');
   if(!b) return;
   ask(b.getAttribute('data-q'));
@@ -218,137 +223,45 @@ function fileToDataUrl(file){
   });
 }
 
-btnUseImage.addEventListener('click', async ()=>{
+if (btnUseImage) btnUseImage.addEventListener('click', async ()=>{
   const file = imgInput.files && imgInput.files[0];
   if(!file) return;
   const dataUrl = await fileToDataUrl(file);
   ask('', dataUrl);
 });
 
-
-// ---------- CSV + Charts ----------
-const csvInput = document.getElementById('csvInput');
-const colSelect = document.getElementById('colSelect');
-const chartType = document.getElementById('chartType');
-const drawBtn = document.getElementById('draw');
-const tableHost = document.getElementById('tableHost');
-const canvas = document.getElementById('chart');
-
-let parsedRows = [];
-let chart = null;
-
-function buildTable(rows, maxRows=12){
-  if(!rows || !rows.length) return;
-  const cols = Object.keys(rows[0] || {});
-  const head = `<tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr>`;
-  const body = rows.slice(0,maxRows).map(r=>{
-    return `<tr>${cols.map(c=>`<td>${escapeHtml(String(r[c] ?? ''))}</td>`).join('')}</tr>`;
-  }).join('');
-  tableHost.innerHTML = `<table>${head}${body}</table>`;
-}
-
-function fillColumns(rows){
-  const cols = Object.keys(rows[0] || {});
-  colSelect.innerHTML = cols.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  colSelect.disabled = false;
-  chartType.disabled = false;
-  drawBtn.disabled = false;
-}
-
-function freqCounts(values){
-  const m = new Map();
-  for(const v of values){
-    const key = (v ?? '').toString().trim();
-    if(!key) continue;
-    m.set(key, (m.get(key)||0)+1);
+// ---------- إدخال صوتي ----------
+const btnMic = document.getElementById('btnMic');
+if (btnMic) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+  if (recognition) {
+    recognition.lang = 'ar-SA';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (e) => {
+      const t = e.results[0][0].transcript;
+      if (t && qEl) qEl.value = (qEl.value + ' ' + t).trim();
+    };
+    recognition.onerror = () => { btnMic.classList.remove('recording'); };
+    recognition.onend = () => { btnMic.classList.remove('recording'); };
+    btnMic.onclick = () => {
+      if (btnMic.classList.contains('recording')) {
+        recognition.stop();
+        return;
+      }
+      try {
+        recognition.start();
+        btnMic.classList.add('recording');
+      } catch (err) {
+        errEl.hidden = false;
+        errEl.textContent = 'خطأ: المتصفح لا يدعم التعرف على الصوت أو ميكروفون غير متاح';
+      }
+    };
+  } else {
+    btnMic.style.display = 'none';
   }
-  const labels = Array.from(m.keys());
-  const counts = labels.map(k=>m.get(k));
-  return {labels, counts};
 }
-
-function histogramBins(nums, k=8){
-  const clean = nums.filter(x=>Number.isFinite(x));
-  if(clean.length===0) return {labels:[], counts:[]};
-
-  const min = Math.min(...clean), max = Math.max(...clean);
-  const range = max - min || 1;
-  const width = range / k;
-  const counts = new Array(k).fill(0);
-
-  for(const x of clean){
-    let idx = Math.floor((x - min) / width);
-    if(idx === k) idx = k-1;
-    counts[idx] += 1;
-  }
-  const labels = counts.map((_,i)=>{
-    const a = min + i*width;
-    const b = min + (i+1)*width;
-    return `${a.toFixed(2)} – ${b.toFixed(2)}`;
-  });
-  return {labels, counts};
-}
-
-function dotPlot(nums){
-  const clean = nums.filter(x=>Number.isFinite(x)).sort((a,b)=>a-b);
-  const labels = clean.map((_,i)=>`${i+1}`);
-  const counts = clean.map(x=>x);
-  return {labels, counts};
-}
-
-function drawChart(type, labels, data){
-  if(chart) chart.destroy();
-  const cfg = {
-    type: (type==='hist' || type==='dot') ? 'bar' : type,
-    data: {
-      labels,
-      datasets: [{ label: 'القيم', data }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: type !== 'hist' && type !== 'dot' } }
-    }
-  };
-  chart = new Chart(canvas, cfg);
-}
-
-csvInput.addEventListener('change', ()=>{
-  const file = csvInput.files && csvInput.files[0];
-  if(!file) return;
-  Papa.parse(file, {
-    header: true,
-    dynamicTyping: false,
-    skipEmptyLines: true,
-    complete: (res)=>{
-      parsedRows = res.data || [];
-      buildTable(parsedRows);
-      if(parsedRows.length) fillColumns(parsedRows);
-    }
-  });
-});
-
-drawBtn.addEventListener('click', ()=>{
-  if(!parsedRows.length) return;
-  const col = colSelect.value;
-  const type = chartType.value;
-
-  const values = parsedRows.map(r=>r[col]);
-  if(type === 'hist'){
-    const nums = values.map(v=>Number(v)).filter(v=>Number.isFinite(v));
-    const {labels, counts} = histogramBins(nums, 8);
-    drawChart('hist', labels, counts);
-    return;
-  }
-  if(type === 'dot'){
-    const nums = values.map(v=>Number(v)).filter(v=>Number.isFinite(v));
-    const {labels, counts} = dotPlot(nums);
-    drawChart('dot', labels, counts);
-    return;
-  }
-
-  const {labels, counts} = freqCounts(values);
-  drawChart(type, labels, counts);
-});
 
 // Initial greeting
 addMsg('assistant', renderMarkdown('مرحبًا. أنا مساعد **إحص 102** — ملتزم بالمنهاج. اسأل عن الجداول التكرارية، التمثيل بالأعمدة والقطاعات، التوزيع التكراري، المدرج والمضلع التكراري والمضلع التكراري المتجمع الصاعد — أو استخدم “الموضوعات السريعة”.'), 'المساعد');
