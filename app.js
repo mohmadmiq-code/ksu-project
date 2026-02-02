@@ -79,19 +79,24 @@ function initChartsInElement(el) {
   });
 }
 
+const KX_L = '<!--KX_L-->', KX_R = '<!--KX_R-->', KX_DL = '<!--KX_DL-->', KX_DR = '<!--KX_DR-->';
+
 function renderMarkdown(md){
   let text = md || '';
-  text = text.replace(/\\\(/g, '\\\\(').replace(/\\\)/g, '\\\\\\)')
-    .replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
-    .replace(/\(frac\s*\{/g, '\\\\\\( \\frac{')
-    .replace(/\(%\s*times/g, '\\\\\\( 100 \\times')
-    .replace(/\\frac\{([^{}]+)\}\{([^{}]*)\}/g, '\\\\\\( \\frac{$1}{$2} \\\\\\)')
-    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, '\\\\[ m = \\frac{L+U}{2} \\\\]')
-    .replace(/\[\s*([^[\]]*\\[a-zA-Z{}]+[^[\]]*)\s*\]/g, '\\\\[ $1 \\\\]')
-    .replace(/\\Rightarrow(?!\s*\\\\)/g, '\\\\\\( \\Rightarrow \\\\\\)')
-    .replace(/\\approx(?!\s*\\\\)/g, '\\\\\\( \\approx \\\\\\)')
-    .replace(/\\times(?!\s*\\\\)/g, '\\\\\\( \\times \\\\\\)');
-  const html = marked.parse(text);
+  text = text.replace(/\\\(/g, KX_L).replace(/\\\)/g, KX_R)
+    .replace(/\\\[/g, KX_DL).replace(/\\\]/g, KX_DR);
+  text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
+    .replace(/\(frac\s*\{/g, KX_L + ' \\frac{')
+    .replace(/\(%\s*times/g, KX_L + ' 100 \\times')
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]*)\}/g, KX_L + ' \\frac{$1}{$2} ' + KX_R)
+    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, KX_DL + ' m = \\frac{L+U}{2} ' + KX_DR)
+    .replace(/\[\s*([^[\]]*\\[a-zA-Z{}]+[^[\]]*)\s*\]/g, KX_DL + ' $1 ' + KX_DR)
+    .replace(/\\Rightarrow/g, KX_L + ' \\Rightarrow ' + KX_R)
+    .replace(/\\approx/g, KX_L + ' \\approx ' + KX_R)
+    .replace(/\\times/g, KX_L + ' \\times ' + KX_R);
+  let html = marked.parse(text);
+  html = html.split(KX_L).join('\\(').split(KX_R).join('\\)')
+    .split(KX_DL).join('\\[').split(KX_DR).join('\\]');
   const container = document.createElement('div');
   container.innerHTML = html;
 
