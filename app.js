@@ -79,25 +79,24 @@ function initChartsInElement(el) {
   });
 }
 
-const KX_L = '\u200B\u200BL\u200B', KX_R = '\u200B\u200BR\u200B', KX_DL = '\u200B\u200BDL\u200B', KX_DR = '\u200B\u200BDR\u200B';
-
 function renderMarkdown(md){
   let text = md || '';
-  text = text.replace(/\\\s*\(/g, KX_L).replace(/\\\s*\)/g, KX_R)
-    .replace(/\\\(/g, KX_L).replace(/\\\)/g, KX_R)
-    .replace(/\\\[/g, KX_DL).replace(/\\\]/g, KX_DR);
+  const TL = '@@KXL@@', TR = '@@KXR@@', DL = '@@KXDL@@', DR = '@@KXDR@@';
+  text = text.replace(/\\\[/g, DL).replace(/\\\]/g, DR)
+    .replace(/\\\s*\(/g, TL).replace(/\\\s*\)/g, TR)
+    .replace(/\\\(/g, TL).replace(/\\\)/g, TR);
   text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
-    .replace(/\(frac\s*\{/g, KX_L + ' \\frac{')
-    .replace(/\(%\s*times/g, KX_L + ' 100 \\times')
-    .replace(/\\frac\{([^{}]+)\}\{([^{}]*)\}/g, KX_L + ' \\frac{$1}{$2} ' + KX_R)
-    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, KX_DL + ' m = \\frac{L+U}{2} ' + KX_DR)
-    .replace(/\[\s*([^[\]]*\\[a-zA-Z{}]+[^[\]]*)\s*\]/g, KX_DL + ' $1 ' + KX_DR)
-    .replace(/\\Rightarrow/g, KX_L + ' \\Rightarrow ' + KX_R)
-    .replace(/\\approx/g, KX_L + ' \\approx ' + KX_R)
-    .replace(/\\times/g, KX_L + ' \\times ' + KX_R);
+    .replace(/\(frac\s*\{/g, TL+' \\frac{')
+    .replace(/\(%\s*times/g, TL+' 100 \\times')
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]*)\}/g, TL+' \\frac{$1}{$2} '+TR)
+    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, DL+' m = \\frac{L+U}{2} '+DR)
+    .replace(/\[\s*([^[\]]*\\[a-zA-Z{}]+[^[\]]*)\s*\]/g, DL+' $1 '+DR)
+    .replace(/\\Rightarrow/g, TL+' \\Rightarrow '+TR)
+    .replace(/\\approx/g, TL+' \\approx '+TR)
+    .replace(/\\times/g, TL+' \\times '+TR);
   let html = marked.parse(text);
-  html = html.split(KX_L).join('\\(').split(KX_R).join('\\)')
-    .split(KX_DL).join('\\[').split(KX_DR).join('\\]');
+  html = html.split(TL).join('$').split(TR).join('$')
+    .split(DL).join('$$').split(DR).join('$$');
   const container = document.createElement('div');
   container.innerHTML = html;
 
@@ -112,11 +111,12 @@ function renderMarkdown(md){
   renderMathInElement(container, {
     delimiters: [
       {left: "$$", right: "$$", display: true},
-      {left: "\\[", right: "\\]", display: true},
       {left: "$", right: "$", display: false},
+      {left: "\\[", right: "\\]", display: true},
       {left: "\\(", right: "\\)", display: false}
     ],
-    throwOnError: false
+    throwOnError: false,
+    strict: false
   });
 
   return container.innerHTML;
