@@ -35,9 +35,10 @@ function createChartPlaceholder(chartData) {
   try {
     const d = typeof chartData === 'string' ? JSON.parse(chartData.trim()) : chartData;
     if (!d || !d.type || !d.data) return null;
+    const chartType = (d.type === 'polygon' || d.type === 'freq_polygon' || d.type === 'ogive') ? 'line' : (d.type === 'hist' ? 'bar' : d.type);
     const wrap = document.createElement('div');
     wrap.className = 'msg-chart-wrap chart-placeholder';
-    wrap.setAttribute('data-chart', JSON.stringify(d));
+    wrap.setAttribute('data-chart', JSON.stringify({ ...d, _chartType: chartType }));
     const canvas = document.createElement('canvas');
     canvas.width = 380;
     canvas.height = 200;
@@ -55,16 +56,21 @@ function initChartsInElement(el) {
       const d = JSON.parse(json);
       const canvas = wrap.querySelector('canvas');
       if (!canvas) return;
+      const isPolygon = d.type === 'polygon' || d.type === 'freq_polygon' || d.type === 'ogive';
+      const isHist = d.type === 'hist';
+      const chartType = d._chartType || (isPolygon ? 'line' : (isHist ? 'bar' : d.type));
       const cfg = {
-        type: d.type === 'hist' ? 'bar' : d.type,
-        data: { labels: d.labels || [], datasets: [{ label: 'القيم', data: d.data }] },
+        type: chartType,
+        data: { labels: d.labels || [], datasets: [{ label: 'القيم', data: d.data, ...(isPolygon && { fill: false, tension: 0, pointRadius: 4 }) }] },
         options: {
           responsive: true,
           maintainAspectRatio: true,
           plugins: { legend: { display: d.type === 'pie' } }
         }
       };
-      if (d.type === 'hist') cfg.options.scales = { x: { display: true }, y: { display: true } };
+      if (isHist) {
+        cfg.options.scales = { x: { display: true, barPercentage: 1, categoryPercentage: 1 }, y: { display: true } };
+      }
       new Chart(canvas, cfg);
       wrap.classList.remove('chart-placeholder');
     } catch (e) { /* ignore */ }
@@ -76,12 +82,12 @@ function renderMarkdown(md){
   text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
     .replace(/\(frac\s*\{/g, '\\\\( \\frac{')
     .replace(/\(%\s*times/g, '\\\\( 100 \\times')
-    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '\\\\( \\frac{$1}{$2} \\\\)')
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]*)\}/g, '\\\\( \\frac{$1}{$2} \\\\)')
     .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, '\\\\[ m = \\frac{L+U}{2} \\\\]')
+    .replace(/\[\s*([^[\]]*\\[a-zA-Z{}]+[^[\]]*)\s*\]/g, '\\\\[ $1 \\\\]')
     .replace(/\\Rightarrow(?!\s*\\\\)/g, '\\\\( \\Rightarrow \\\\)')
     .replace(/\\approx(?!\s*\\\\)/g, '\\\\( \\approx \\\\)')
-    .replace(/\\times(?!\s*\\\\)/g, '\\\\( \\times \\\\)')
-    .replace(/\\Sigma(?!\s*\\\\)/g, '\\\\( \\Sigma \\\\)');
+    .replace(/\\times(?!\s*\\\\)/g, '\\\\( \\times \\\\)');
   const html = marked.parse(text);
   const container = document.createElement('div');
   container.innerHTML = html;
