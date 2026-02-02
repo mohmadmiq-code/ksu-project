@@ -79,11 +79,12 @@ function initChartsInElement(el) {
   });
 }
 
-const KX_L = '<!--KX_L-->', KX_R = '<!--KX_R-->', KX_DL = '<!--KX_DL-->', KX_DR = '<!--KX_DR-->';
+const KX_L = '\u200B\u200BL\u200B', KX_R = '\u200B\u200BR\u200B', KX_DL = '\u200B\u200BDL\u200B', KX_DR = '\u200B\u200BDR\u200B';
 
 function renderMarkdown(md){
   let text = md || '';
-  text = text.replace(/\\\(/g, KX_L).replace(/\\\)/g, KX_R)
+  text = text.replace(/\\\s*\(/g, KX_L).replace(/\\\s*\)/g, KX_R)
+    .replace(/\\\(/g, KX_L).replace(/\\\)/g, KX_R)
     .replace(/\\\[/g, KX_DL).replace(/\\\]/g, KX_DR);
   text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
     .replace(/\(frac\s*\{/g, KX_L + ' \\frac{')
