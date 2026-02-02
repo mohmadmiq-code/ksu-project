@@ -69,7 +69,9 @@ function initChartsInElement(el) {
         }
       };
       if (isHist) {
-        cfg.options.scales = { x: { display: true, barPercentage: 1, categoryPercentage: 1 }, y: { display: true } };
+        cfg.options.scales = { x: { display: true }, y: { display: true } };
+        cfg.data.datasets[0].barPercentage = 1;
+        cfg.data.datasets[0].categoryPercentage = 1;
       }
       new Chart(canvas, cfg);
       wrap.classList.remove('chart-placeholder');
@@ -79,15 +81,16 @@ function initChartsInElement(el) {
 
 function renderMarkdown(md){
   let text = md || '';
-  text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
-    .replace(/\(frac\s*\{/g, '\\\\( \\frac{')
-    .replace(/\(%\s*times/g, '\\\\( 100 \\times')
-    .replace(/\\frac\{([^{}]+)\}\{([^{}]*)\}/g, '\\\\( \\frac{$1}{$2} \\\\)')
+  text = text.replace(/\\\(/g, '\\\\(').replace(/\\\)/g, '\\\\\\)')
+    .replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
+    .replace(/\(frac\s*\{/g, '\\\\\\( \\frac{')
+    .replace(/\(%\s*times/g, '\\\\\\( 100 \\times')
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]*)\}/g, '\\\\\\( \\frac{$1}{$2} \\\\\\)')
     .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, '\\\\[ m = \\frac{L+U}{2} \\\\]')
     .replace(/\[\s*([^[\]]*\\[a-zA-Z{}]+[^[\]]*)\s*\]/g, '\\\\[ $1 \\\\]')
-    .replace(/\\Rightarrow(?!\s*\\\\)/g, '\\\\( \\Rightarrow \\\\)')
-    .replace(/\\approx(?!\s*\\\\)/g, '\\\\( \\approx \\\\)')
-    .replace(/\\times(?!\s*\\\\)/g, '\\\\( \\times \\\\)');
+    .replace(/\\Rightarrow(?!\s*\\\\)/g, '\\\\\\( \\Rightarrow \\\\\\)')
+    .replace(/\\approx(?!\s*\\\\)/g, '\\\\\\( \\approx \\\\\\)')
+    .replace(/\\times(?!\s*\\\\)/g, '\\\\\\( \\times \\\\\\)');
   const html = marked.parse(text);
   const container = document.createElement('div');
   container.innerHTML = html;
@@ -195,16 +198,19 @@ async function ask(message, imageDataUrl=null){
   }
 }
 
-sendBtn.addEventListener('click', ()=>{
+sendBtn.addEventListener('click', async ()=>{
   const m = (qEl.value || '').trim();
-  if(!m) {
+  const file = imgInput?.files?.[0];
+  if(!m && !file) {
     errEl.hidden = false;
-    errEl.textContent = 'اكتب سؤالك أولاً أو استخدم التحدث';
+    errEl.textContent = 'اكتب سؤالك أو اختر صورة ثم اضغط "استخدام الصورة"';
     return;
   }
   errEl.hidden = true;
   qEl.value = '';
-  ask(m);
+  const dataUrl = file ? await fileToDataUrl(file) : null;
+  if (file) imgInput.value = '';
+  ask(m || (dataUrl ? 'حل السؤال من الصورة' : ''), dataUrl);
 });
 
 qEl.addEventListener('keydown', (e)=>{
