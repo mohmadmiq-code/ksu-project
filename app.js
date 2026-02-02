@@ -31,47 +31,65 @@ function addMsg(role, bodyHtml, meta){
   return wrap.querySelector('.body');
 }
 
-function renderChartFromData(chartData) {
+function createChartPlaceholder(chartData) {
   try {
     const d = typeof chartData === 'string' ? JSON.parse(chartData.trim()) : chartData;
     if (!d || !d.type || !d.data) return null;
     const wrap = document.createElement('div');
-    wrap.className = 'msg-chart-wrap';
+    wrap.className = 'msg-chart-wrap chart-placeholder';
+    wrap.setAttribute('data-chart', JSON.stringify(d));
     const canvas = document.createElement('canvas');
+    canvas.width = 380;
+    canvas.height = 200;
     wrap.appendChild(canvas);
-    const cfg = {
-      type: d.type === 'hist' ? 'bar' : d.type,
-      data: { labels: d.labels || [], datasets: [{ label: 'القيم', data: d.data }] },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: { legend: { display: d.type === 'pie' } }
-      }
-    };
-    if (d.type === 'hist') cfg.options.scales = { x: { display: true }, y: { display: true } };
-    new Chart(canvas, cfg);
     return wrap;
   } catch (e) { return null; }
+}
+
+function initChartsInElement(el) {
+  if (!el) return;
+  el.querySelectorAll('.chart-placeholder').forEach(wrap => {
+    try {
+      const json = wrap.getAttribute('data-chart');
+      if (!json) return;
+      const d = JSON.parse(json);
+      const canvas = wrap.querySelector('canvas');
+      if (!canvas) return;
+      const cfg = {
+        type: d.type === 'hist' ? 'bar' : d.type,
+        data: { labels: d.labels || [], datasets: [{ label: 'القيم', data: d.data }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: { legend: { display: d.type === 'pie' } }
+        }
+      };
+      if (d.type === 'hist') cfg.options.scales = { x: { display: true }, y: { display: true } };
+      new Chart(canvas, cfg);
+      wrap.classList.remove('chart-placeholder');
+    } catch (e) { /* ignore */ }
+  });
 }
 
 function renderMarkdown(md){
   let text = md || '';
   text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
-    .replace(/\(frac\s*\{/g, '\\( \\frac{')
-    .replace(/\(%\s*times/g, '\\( 100 \\times')
-    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '\\( \\frac{$1}{$2} \\)')
-    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, '\\[ m = \\frac{L+U}{2} \\]')
-    .replace(/\\Rightarrow(?!\s*\\))/g, '\\( \\Rightarrow \\)')
-    .replace(/\\approx(?!\s*\\))/g, '\\( \\approx \\)')
-    .replace(/\\times(?!\s*\\))/g, '\\( \\times \\)');
+    .replace(/\(frac\s*\{/g, '\\\\( \\frac{')
+    .replace(/\(%\s*times/g, '\\\\( 100 \\times')
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '\\\\( \\frac{$1}{$2} \\\\)')
+    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, '\\\\[ m = \\frac{L+U}{2} \\\\]')
+    .replace(/\\Rightarrow(?!\s*\\\\)/g, '\\\\( \\Rightarrow \\\\)')
+    .replace(/\\approx(?!\s*\\\\)/g, '\\\\( \\approx \\\\)')
+    .replace(/\\times(?!\s*\\\\)/g, '\\\\( \\times \\\\)')
+    .replace(/\\Sigma(?!\s*\\\\)/g, '\\\\( \\Sigma \\\\)');
   const html = marked.parse(text);
   const container = document.createElement('div');
   container.innerHTML = html;
 
   container.querySelectorAll('pre > code').forEach(code => {
-    const txt = code.textContent || '';
-    if (/^\s*\{\s*"type"/.test(txt)) {
-      const chartEl = renderChartFromData(txt);
+    const txt = (code.textContent || '').trim();
+    if (/^\s*\{\s*"type"\s*:/.test(txt) && /"labels"|"data"/.test(txt)) {
+      const chartEl = createChartPlaceholder(txt);
       if (chartEl) code.closest('pre').replaceWith(chartEl);
     }
   });
@@ -150,6 +168,7 @@ async function ask(message, imageDataUrl=null){
     holder.closest('.msg').classList.remove('loading');
     const html = renderMarkdown(data.text || '');
     await typeInto(holder, html);
+    initChartsInElement(holder);
   }catch(e){
     currentAbortController = null;
     sendBtn.disabled = false;
