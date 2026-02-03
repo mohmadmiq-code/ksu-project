@@ -82,6 +82,28 @@ function initChartsInElement(el) {
 function renderMarkdown(md){
   let text = md || '';
   const TL = '@@KXL@@', TR = '@@KXR@@', DL = '@@KXDL@@', DR = '@@KXDR@@';
+  const PD = '@@PD@@', PDD = '@@PDD@@', PDE = '@@/PD@@', PDDE = '@@/PDD@@';
+
+  // 1) Protect existing $...$ and $$...$$ so marked doesn't treat $ as emphasis
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, PDD + '$1' + PDDE);
+  text = text.replace(/\$([^$\n]+?)\$/g, PD + '$1' + PDE);
+
+  // 2) Normalize bare LaTeX (API sometimes returns without backslash)
+  text = text.replace(/(?<!\\)frac\s*\{/g, '\\frac{');
+  text = text.replace(/(?<!\\)log_2\s*\(/g, '\\log_2(');
+  text = text.replace(/(?<!\\)log\s*_2\s*\(/g, '\\log_2(');
+  text = text.replace(/(?<!\\)Sigma\s*(\s*f\b)/g, '\\Sigma$1');
+  text = text.replace(/(?<!\\)approx\b/g, '\\approx');
+  text = text.replace(/(?<!\\)times\b/g, '\\times');
+  text = text.replace(/(?<!\\)Rightarrow\b/g, '\\Rightarrow');
+
+  // 3) Wrap standalone \frac{...}{...} and \log_2(...) in $ so KaTeX sees them
+  text = text.replace(/(\s|^)(\\frac\{[^{}]+\}\{[^{}]*\})(\s|[,.]|$)/g, '$1$$2$$3');
+  text = text.replace(/(\s|^)(\\log_2\([^)]+\))(\s|[,.]|$)/g, '$1$$2$$3');
+  // Protect newly added $...$ so marked doesn't treat $ as emphasis
+  text = text.replace(/\$([^$\n]+?)\$/g, PD + '$1' + PDE);
+
+  // 4) Standard \( \), \[ \] and existing replacements
   text = text.replace(/\\\[/g, DL).replace(/\\\]/g, DR)
     .replace(/\\\s*\(/g, TL).replace(/\\\s*\)/g, TR)
     .replace(/\\\(/g, TL).replace(/\\\)/g, TR);
@@ -96,7 +118,9 @@ function renderMarkdown(md){
     .replace(/\\times/g, TL+' \\times '+TR);
   let html = marked.parse(text);
   html = html.split(TL).join('$').split(TR).join('$')
-    .split(DL).join('$$').split(DR).join('$$');
+    .split(DL).join('$$').split(DR).join('$$')
+    .split(PD).join('$').split(PDE).join('$')
+    .split(PDD).join('$$').split(PDDE).join('$$');
   const container = document.createElement('div');
   container.innerHTML = html;
 
@@ -137,6 +161,7 @@ async function typeInto(el, html){
 }
 
 let currentAbortController = null;
+let chatHistory = []; // سجل المحادثة لفهم تسلسل الأسئلة
 
 async function ask(message, imageDataUrl=null){
   errEl.hidden = true;
@@ -145,7 +170,8 @@ async function ask(message, imageDataUrl=null){
   if (chips) chips.querySelectorAll('button').forEach(b=>b.disabled=true);
   if (btnUseImage) btnUseImage.disabled = true;
 
-  addMsg('user', `<div>${escapeHtml(message || '📷 (سؤال من صورة)')}</div>`, 'أنت');
+  const userContent = message || (imageDataUrl ? 'حل السؤال من الصورة' : '');
+  addMsg('user', `<div>${escapeHtml(userContent || '📷 (سؤال من صورة)')}</div>`, 'أنت');
 
   const holder = addMsg('assistant', `<div class="loading-wrap"><span class="loading-dots">جاري المعالجة</span> <button type="button" class="btn-cancel" aria-label="إلغاء">إلغاء</button></div>`, 'المساعد');
   holder.closest('.msg').classList.add('loading');
@@ -155,11 +181,11 @@ async function ask(message, imageDataUrl=null){
   cancelBtn.onclick = () => controller.abort();
 
   try{
-    const timeout = setTimeout(() => controller.abort(), 35000);
+    const timeout = setTimeout(() => controller.abort(), 40000);
     const res = await fetch(API_URL, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ message, history: [], imageDataUrl }),
+      body: JSON.stringify({ message: userContent, history: chatHistory, imageDataUrl }),
       signal: controller.signal
     });
     clearTimeout(timeout);
@@ -181,7 +207,10 @@ async function ask(message, imageDataUrl=null){
       throw new Error(data.message || errMap[data.error] || data.error || 'فشل الاتصال بالخادم');
     }
     holder.closest('.msg').classList.remove('loading');
-    const html = renderMarkdown(data.text || '');
+    const replyText = data.text || '';
+    chatHistory.push({ role: 'user', content: userContent });
+    chatHistory.push({ role: 'assistant', content: replyText });
+    const html = renderMarkdown(replyText);
     await typeInto(holder, html);
     initChartsInElement(holder);
   }catch(e){
