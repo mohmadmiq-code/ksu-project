@@ -79,48 +79,50 @@ function initChartsInElement(el) {
   });
 }
 
-function renderMarkdown(md){
+function renderMarkdown(md) {
   let text = md || '';
-  const TL = '@@KXL@@', TR = '@@KXR@@', DL = '@@KXDL@@', DR = '@@KXDR@@';
-  const PD = '@@PD@@', PDD = '@@PDD@@', PDE = '@@/PD@@', PDDE = '@@/PDD@@';
+  const mathBlocks = [];
 
-  // 1) Protect existing $...$ and $$...$$ so marked doesn't treat $ as emphasis
-  text = text.replace(/\$\$([\s\S]*?)\$\$/g, PDD + '$1' + PDDE);
-  text = text.replace(/\$([^$\n]+?)\$/g, PD + '$1' + PDE);
+  function stash(display, content) {
+    const i = mathBlocks.length;
+    mathBlocks.push({ display, content: content.trim() });
+    return '\u200B@@M' + i + '@@\u200B';
+  }
 
-  // 2) Normalize bare LaTeX (API sometimes returns without backslash)
+  // 1) استخراج وحماية كل الرياضيات قبل تمريرها إلى Markdown
+  // \[ ... \] عرض منفصل
+  text = text.replace(/\\\[\s*([\s\S]*?)\s*\\\]/g, (_, m) => stash(true, m));
+  // \( ... \) نص داخل السطر
+  text = text.replace(/\\\(\s*([\s\S]*?)\s*\\\)/g, (_, m) => stash(false, m));
+  // $$ ... $$ عرض منفصل
+  text = text.replace(/\$\$\s*([\s\S]*?)\s*\$\$/g, (_, m) => stash(true, m));
+  // $ ... $ نص داخل السطر
+  text = text.replace(/\$\s*([^$\n]+?)\s*\$/g, (_, m) => stash(false, m));
+
+  // 2) تحويل الرياضيات العارية (بدون حدود) إلى LaTeX صحيح
   text = text.replace(/(?<!\\)frac\s*\{/g, '\\frac{');
   text = text.replace(/(?<!\\)log_2\s*\(/g, '\\log_2(');
   text = text.replace(/(?<!\\)log\s*_2\s*\(/g, '\\log_2(');
-  text = text.replace(/(?<!\\)Sigma\s*(\s*f\b)/g, '\\Sigma$1');
+  text = text.replace(/(?<!\\)Sigma\b/g, '\\Sigma');
   text = text.replace(/(?<!\\)approx\b/g, '\\approx');
   text = text.replace(/(?<!\\)times\b/g, '\\times');
   text = text.replace(/(?<!\\)Rightarrow\b/g, '\\Rightarrow');
+  text = text.replace(/(?<!\\)lceil\b/g, '\\lceil');
+  text = text.replace(/(?<!\\)rceil\b/g, '\\rceil');
 
-  // 3) Wrap standalone \frac{...}{...} and \log_2(...) in $ so KaTeX sees them
-  text = text.replace(/(\s|^)(\\frac\{[^{}]+\}\{[^{}]*\})(\s|[,.]|$)/g, '$1$$2$$3');
-  text = text.replace(/(\s|^)(\\log_2\([^)]+\))(\s|[,.]|$)/g, '$1$$2$$3');
-  // Protect newly added $...$ so marked doesn't treat $ as emphasis
-  text = text.replace(/\$([^$\n]+?)\$/g, PD + '$1' + PDE);
+  // 3) لف الأنماط الشائعة: \frac{}{} و \log_2() و (R+1)/k
+  text = text.replace(/(\s|^)(\\frac\{[^{}]*\}\{[^{}]*\})(?=[\s,.\]])/g, (_, before, m) => before + stash(false, m));
+  text = text.replace(/(\s|^)(\\log_2\([^)]*\))(?=[\s,.\]])/g, (_, before, m) => before + stash(false, m));
+  text = text.replace(/(\s|^)\(([A-Za-z]+)\s*\+\s*1\)\s*\/\s*([a-zA-Z])(?=[\s,.\])])/g, (_, before, num, den) => before + stash(false, '\\frac{' + num + '+1}{' + den + '}'));
 
-  // 4) Standard \( \), \[ \] and existing replacements
-  text = text.replace(/\\\[/g, DL).replace(/\\\]/g, DR)
-    .replace(/\\\s*\(/g, TL).replace(/\\\s*\)/g, TR)
-    .replace(/\\\(/g, TL).replace(/\\\)/g, TR);
-  text = text.replace(/(\d+(?:\.\d+)?)\\100(?!\d)/g, '$1\\%')
-    .replace(/\(frac\s*\{/g, TL+' \\frac{')
-    .replace(/\(%\s*times/g, TL+' 100 \\times')
-    .replace(/\\frac\{([^{}]+)\}\{([^{}]*)\}/g, TL+' \\frac{$1}{$2} '+TR)
-    .replace(/\[\s*m\s*=\s*\\frac\s*\{L\s*\+\s*U\}\s*\{2\}\s*\]/g, DL+' m = \\frac{L+U}{2} '+DR)
-    .replace(/\[\s*([^[\]]*\\[a-zA-Z{}]+[^[\]]*)\s*\]/g, DL+' $1 '+DR)
-    .replace(/\\Rightarrow/g, TL+' \\Rightarrow '+TR)
-    .replace(/\\approx/g, TL+' \\approx '+TR)
-    .replace(/\\times/g, TL+' \\times '+TR);
   let html = marked.parse(text);
-  html = html.split(TL).join('$').split(TR).join('$')
-    .split(DL).join('$$').split(DR).join('$$')
-    .split(PD).join('$').split(PDE).join('$')
-    .split(PDD).join('$$').split(PDDE).join('$$');
+
+  // 4) استعادة الرياضيات بصيغة $ أو $$ لـ KaTeX
+  mathBlocks.forEach((mb, i) => {
+    const delim = mb.display ? '$$' : '$';
+    html = html.split('\u200B@@M' + i + '@@\u200B').join(delim + mb.content + delim);
+  });
+
   const container = document.createElement('div');
   container.innerHTML = html;
 
@@ -134,10 +136,8 @@ function renderMarkdown(md){
 
   renderMathInElement(container, {
     delimiters: [
-      {left: "$$", right: "$$", display: true},
-      {left: "$", right: "$", display: false},
-      {left: "\\[", right: "\\]", display: true},
-      {left: "\\(", right: "\\)", display: false}
+      { left: '$$', right: '$$', display: true },
+      { left: '$', right: '$', display: false }
     ],
     throwOnError: false,
     strict: false
